@@ -43,47 +43,13 @@ export interface StrapiError {
 const STRAPI_BASE_URL = 'http://localhost:8787';
 const STRAPI_API_TOKEN = 'efccb93eba2970b3e14e3c5fb6af7948ef412978b7da326dc71c43720457d9cd5cee8de541517952a9f23f93a5a33b188857228d35a397b6fbc7845b1b1146d6afc550e597a4bea6845b6e734af3cd524a8dda0b772d79851dea7a2d02172dec8c2dadd36e2f4eca7f7bed6a959bad18b03f3bb67a47ceb92f318e0b9f463d26';
 
-// Helper function to create FormData for file uploads
-export function createProductFormData(product: StrapiProduct): FormData {
-  const formData = new FormData();
-
-  // Add product fields
-  Object.entries({
-    name: product.name,
-    category: product.category,
-    brand: product.brand,
-    model: product.model,
-    condition: product.condition,
-    price_per_day: product.price_per_day,
-    description: product.description,
-    specs: product.specs,
-    city: product.city,
-    district: product.district,
-    phone_number: product.phone_number,
-    whatsapp_number: product.whatsapp_number,
-    terms_accepted: product.terms_accepted,
-    status_product: product.status_product || "pending",
-  }).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      formData.append(`data[${key}]`, String(value));
-    }
-  });
-
-  // Attach images (for Strapi v4, use "files" if your field is called "images")
-  product.images.forEach((image) => {
-    formData.append("files", image, image.name);
-  });
-
-  return formData;
-}
-
 // Test Strapi connection and token validity
 export async function testStrapiConnection(): Promise<boolean> {
   try {
     // First test: Basic server connectivity
     try {
       await fetch(`${STRAPI_BASE_URL}/_health`, { method: "GET" });
-    } catch (basicError) {}
+    } catch (basicError) { }
 
     // Second test: API with token
     const response = await fetch(
@@ -107,6 +73,30 @@ export async function testStrapiConnection(): Promise<boolean> {
   }
 }
 
+// Helper function to create FormData for file uploads
+function createProductFormData(product: StrapiProduct): FormData {
+  const formData = new FormData();
+
+  // 1. Destructure to separate files from the rest
+  const { images, ...fields } = product;
+
+  // 2. Remove undefined fields from text data
+  const cleanFields = Object.fromEntries(
+    Object.entries(fields).filter(([_, value]) => value !== undefined)
+  );
+
+  // 3. Append the data as JSON
+  formData.append("data", JSON.stringify(cleanFields));
+
+  // 4. Append images to "files.images"
+  images.forEach((file) => {
+    formData.append("files.images", file);
+  });
+
+  return formData;
+}
+
+
 // API Functions
 export async function createProduct(
   product: StrapiProduct,
@@ -125,14 +115,18 @@ export async function createProduct(
       );
     }
 
-    const formData = createProductFormData(product);
+    const FormData = createProductFormData(product);
+
+    console.log("Submitting product to Strapi:", FormData);
+    return;
+    
 
     const response = await fetch(`${STRAPI_BASE_URL}/api/products`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${STRAPI_API_TOKEN}`,
       },
-      body: formData,
+      body: FormData,
     });
 
     // Handle authentication errors without reading body
@@ -143,7 +137,7 @@ export async function createProduct(
     }
 
     // Read response body only once
-    let responseText;
+    let responseText: string;
     try {
       responseText = await response.text();
     } catch (readError) {

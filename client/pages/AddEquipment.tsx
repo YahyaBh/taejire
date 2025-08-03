@@ -129,17 +129,15 @@ export default function AddEquipment() {
     setSubmitError(null);
 
     try {
-      // Validate required fields
       if (!formData.terms_accepted) {
         throw new Error("يجب الموافقة على شروط الاستخدام");
       }
 
-      if (formData.images.length === 0) {
+      if (!formData.images || formData.images.length === 0) {
         throw new Error("يجب إضافة صورة واحدة على الأقل للأداة");
       }
 
-      // Prepare data for Strapi
-      const productData: StrapiProduct = {
+      const product: StrapiProduct = {
         name: formData.name,
         category: mapCategoryToEnglish(formData.category),
         brand: formData.brand || undefined,
@@ -152,22 +150,23 @@ export default function AddEquipment() {
         district: formData.district,
         phone_number: formData.phone_number,
         whatsapp_number: formData.whatsapp_number || undefined,
-        images: formData.images, // Array of File objects
         terms_accepted: formData.terms_accepted,
         status_product: "pending",
+        images: formData.images,
       };
 
-      await createProduct(productData); // This will handle images in strapi.ts
-      setIsSubmitted(true);
+      await createProduct(product);
+      // setIsSubmitted(true);
     } catch (error) {
       console.error("Error submitting product:", error);
       setSubmitError(
-        error instanceof Error ? error.message : "حدث خطأ أثناء إرسال البيانات",
+        error instanceof Error ? error.message : "حدث خطأ أثناء إرسال البيانات"
       );
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   if (isSubmitted) {
     return (
@@ -529,13 +528,12 @@ export default function AddEquipment() {
 
               {/* Image Upload Area */}
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                  dragActive
-                    ? "border-teal bg-teal/5"
-                    : formData.images.length > 0
-                      ? "border-teal"
-                      : "border-gray-300"
-                }`}
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive
+                  ? "border-teal bg-teal/5"
+                  : formData.images.length > 0
+                    ? "border-teal"
+                    : "border-gray-300"
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
